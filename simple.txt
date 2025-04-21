@@ -1,0 +1,223 @@
+print("Loading...")
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+local forceSpeed = nil
+local forceJump = nil
+local infJumpEnabled = false
+local walkOnWaterEnabled = false
+
+local mainGui = Instance.new("ScreenGui", game.CoreGui)
+mainGui.Name = "TeleportSpeedGUI"
+mainGui.ResetOnSpawn = false
+
+local toggleButton = Instance.new("TextButton", mainGui)
+toggleButton.Size = UDim2.new(0, 120, 0, 30)
+toggleButton.Position = UDim2.new(0, 20, 0, 20)
+toggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+toggleButton.Text = "Open GUI"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", toggleButton)
+
+local frame = Instance.new("Frame", mainGui)
+frame.Size = UDim2.new(0, 300, 0, 400)
+frame.Position = UDim2.new(0, 20, 0, 60)
+frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+frame.Visible = false
+frame.Active = true
+frame.Draggable = true
+Instance.new("UICorner", frame)
+
+local closeButton = Instance.new("TextButton", frame)
+closeButton.Text = "Tutup GUI"
+closeButton.Position = UDim2.new(0, 10, 0, 10)
+closeButton.Size = UDim2.new(0, 280, 0, 30)
+closeButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", closeButton)
+
+closeButton.MouseButton1Click:Connect(function()
+    mainGui:Destroy()
+end)
+
+local coordBox = Instance.new("TextBox", frame)
+coordBox.PlaceholderText = "Masukkan koordinat (x,y,z)"
+coordBox.Position = UDim2.new(0, 10, 0, 50)
+coordBox.Size = UDim2.new(0, 280, 0, 30)
+coordBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+coordBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+coordBox.Text = ""
+
+local tpButton = Instance.new("TextButton", frame)
+tpButton.Text = "Teleport"
+tpButton.Position = UDim2.new(0, 10, 0, 90)
+tpButton.Size = UDim2.new(0, 280, 0, 30)
+tpButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+tpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", tpButton)
+
+local copyButton = Instance.new("TextButton", frame)
+copyButton.Text = "Copy Koordinat Saat Ini"
+copyButton.Position = UDim2.new(0, 10, 0, 130)
+copyButton.Size = UDim2.new(0, 280, 0, 30)
+copyButton.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+copyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", copyButton)
+
+local speedBox = Instance.new("TextBox", frame)
+speedBox.PlaceholderText = "WalkSpeed (Default: 16)"
+speedBox.Position = UDim2.new(0, 10, 0, 170)
+speedBox.Size = UDim2.new(0, 280, 0, 30)
+speedBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+speedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedBox.Text = ""
+
+local jumpBox = Instance.new("TextBox", frame)
+jumpBox.PlaceholderText = "JumpPower (Default: 50)"
+jumpBox.Position = UDim2.new(0, 10, 0, 210)
+jumpBox.Size = UDim2.new(0, 280, 0, 30)
+jumpBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+jumpBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+jumpBox.Text = ""
+
+local applyButton = Instance.new("TextButton", frame)
+applyButton.Text = "Apply Speed & Jump"
+applyButton.Position = UDim2.new(0, 10, 0, 250)
+applyButton.Size = UDim2.new(0, 280, 0, 30)
+applyButton.BackgroundColor3 = Color3.fromRGB(200, 170, 0)
+applyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", applyButton)
+
+local infJumpButton = Instance.new("TextButton", frame)
+infJumpButton.Text = "Toggle Infinite Jump [OFF]"
+infJumpButton.Position = UDim2.new(0, 10, 0, 290)
+infJumpButton.Size = UDim2.new(0, 280, 0, 30)
+infJumpButton.BackgroundColor3 = Color3.fromRGB(170, 50, 255)
+infJumpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", infJumpButton)
+
+local waterButton = Instance.new("TextButton", frame)
+waterButton.Text = "Walk on Water"
+waterButton.Position = UDim2.new(0, 10, 0, 330)
+waterButton.Size = UDim2.new(0, 280, 0, 30)
+waterButton.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+waterButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", waterButton)
+
+toggleButton.MouseButton1Click:Connect(function()
+    frame.Visible = not frame.Visible
+    toggleButton.Text = frame.Visible and "Close GUI" or "Open GUI"
+end)
+
+tpButton.MouseButton1Click:Connect(function()
+    local input = coordBox.Text
+    local coords = {}
+    for val in string.gmatch(input, "([^,]+)") do
+        table.insert(coords, tonumber(val))
+    end
+    if #coords == 3 and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(coords[1], coords[2], coords[3])
+    end
+end)
+
+copyButton.MouseButton1Click:Connect(function()
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if hrp and setclipboard then
+        local pos = hrp.Position
+        local coordString = string.format("%.2f,%.2f,%.2f", pos.X, pos.Y, pos.Z)
+        setclipboard(coordString)
+    end
+end)
+
+applyButton.MouseButton1Click:Connect(function()
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            local ws = tonumber(speedBox.Text)
+            local jp = tonumber(jumpBox.Text)
+            if ws then
+                hum.WalkSpeed = ws
+                forceSpeed = ws
+            end
+            if jp then
+                hum.JumpPower = jp
+                forceJump = jp
+            end
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChildOfClass("Humanoid") then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if forceSpeed then hum.WalkSpeed = forceSpeed end
+        if forceJump then hum.JumpPower = forceJump end
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if infJumpEnabled then
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChildOfClass("Humanoid") then
+            char:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+        end
+    end
+end)
+
+infJumpButton.MouseButton1Click:Connect(function()
+    infJumpEnabled = not infJumpEnabled
+    infJumpButton.Text = "Toggle Infinite Jump [" .. (infJumpEnabled and "ON" or "OFF") .. "]"
+end)
+
+waterButton.MouseButton1Click:Connect(function()
+    local fishingZone = workspace:FindFirstChild("zones") and workspace.zones:FindFirstChild("fishing")
+    if fishingZone then
+        for _, v in pairs(fishingZone:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = true
+            end
+        end
+    end
+end)
+
+local draggingToggle = false
+local dragInputToggle, mousePosToggle, framePosToggle
+
+toggleButton.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		draggingToggle = true
+		mousePosToggle = input.Position
+		framePosToggle = toggleButton.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				draggingToggle = false
+			end
+		end)
+	end
+end)
+
+toggleButton.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInputToggle = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInputToggle and draggingToggle then
+		local delta = input.Position - mousePosToggle
+		toggleButton.Position = UDim2.new(
+			framePosToggle.X.Scale,
+			framePosToggle.X.Offset + delta.X,
+			framePosToggle.Y.Scale,
+			framePosToggle.Y.Offset + delta.Y
+		)
+	end
+end)
+
+print("Done!")
