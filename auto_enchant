@@ -1,0 +1,199 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local UIS = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+local enchantData = require(ReplicatedStorage.shared.modules.library.rods.enchants).Enchants
+local enchantList = {}
+for name, _ in pairs(enchantData) do
+    table.insert(enchantList, name)
+end
+
+local screenGui = Instance.new("ScreenGui", game.CoreGui)
+screenGui.Name = "AutoEnchantUI"
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 300, 0, 230)
+frame.Position = UDim2.new(0, 20, 0.3, 0)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+
+local title = Instance.new("TextLabel", frame)
+title.Text = "Auto Enchant"
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+
+local dropdown = Instance.new("TextButton", frame)
+dropdown.Text = "Pilih Enchant"
+dropdown.Size = UDim2.new(1, -20, 0, 30)
+dropdown.Position = UDim2.new(0, 10, 0, 40)
+dropdown.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+dropdown.TextColor3 = Color3.new(1, 1, 1)
+dropdown.Font = Enum.Font.Gotham
+dropdown.TextSize = 14
+
+local dropdownList = Instance.new("ScrollingFrame", frame)
+dropdownList.Size = UDim2.new(1, -20, 0, 100)
+dropdownList.Position = UDim2.new(0, 10, 0, 75)
+dropdownList.CanvasSize = UDim2.new(0, 0, 0, #enchantList * 24)
+dropdownList.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+dropdownList.Visible = false
+dropdownList.BorderSizePixel = 0
+dropdownList.ScrollBarThickness = 4
+
+local selectedEnchant = nil
+for i, name in ipairs(enchantList) do
+    local btn = Instance.new("TextButton", dropdownList)
+    btn.Size = UDim2.new(1, 0, 0, 24)
+    btn.Position = UDim2.new(0, 0, 0, (i - 1) * 24)
+    btn.Text = name
+    btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+
+    btn.MouseButton1Click:Connect(function()
+        selectedEnchant = name
+        dropdown.Text = "Target: " .. name
+        dropdownList.Visible = false
+    end)
+end
+
+dropdown.MouseButton1Click:Connect(function()
+    dropdownList.Visible = not dropdownList.Visible
+end)
+
+local toggleBtn = Instance.new("TextButton", frame)
+toggleBtn.Text = "Start"
+toggleBtn.Size = UDim2.new(1, -20, 0, 35)
+toggleBtn.Position = UDim2.new(0, 10, 1, -60)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 14
+
+local currentEnchantLabel = Instance.new("TextLabel", frame)
+currentEnchantLabel.Size = UDim2.new(1, -20, 0, 25)
+currentEnchantLabel.Position = UDim2.new(0, 10, 1, -25)
+currentEnchantLabel.BackgroundTransparency = 1
+currentEnchantLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+currentEnchantLabel.Font = Enum.Font.Gotham
+currentEnchantLabel.TextSize = 14
+currentEnchantLabel.TextXAlignment = Enum.TextXAlignment.Left
+currentEnchantLabel.Text = "Enchant Sekarang: -"
+
+local running = false
+
+local function getCurrentRodEnchant()
+    local hud = LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("hud")
+    local notify = hud and hud:FindFirstChild("NewEnchantNotify")
+    if notify and notify.Text and notify.Text ~= "" then
+        return notify.Text
+    end
+    return nil
+end
+
+local function waitUntilNotifyGone(timeout)
+    timeout = timeout or 10
+    local t0 = tick()
+    repeat
+        local hud = LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("hud")
+        if hud and not hud:FindFirstChild("NewEnchantNotify") then break end
+        task.wait(0.1)
+    until tick() - t0 > timeout
+end
+
+local function fireButtonConnections(button)
+    pcall(function()
+        for _, connection in pairs(getconnections(button.MouseButton1Click)) do
+            connection:Fire()
+            task.wait(0.1)
+        end
+    end)
+end
+
+local function pressConfirmButton()
+    local gui = LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("over")
+    local confirmButton = gui and gui:FindFirstChild("prompt") and gui.prompt:FindFirstChild("confirm")
+    if confirmButton then
+        fireButtonConnections(confirmButton)
+    end
+end
+
+local function autoEnchant()
+    local function findAltar()
+        return Workspace:FindFirstChild("Enchant Altar") or
+               (Workspace:FindFirstChild("world") and Workspace.world:FindFirstChild("interactables") and
+                Workspace.world.interactables:FindFirstChild("Enchant Altar"))
+    end
+
+    while running do
+        local altar = findAltar()
+        if not altar then warn("Altar tidak ditemukan!") break end
+
+        LocalPlayer.Character:PivotTo(CFrame.new(altar:GetPivot().Position + Vector3.new(0, 3, 0)))
+        task.wait(1)
+
+        for _, prompt in ipairs(altar:GetDescendants()) do
+            if prompt:IsA("ProximityPrompt") then
+                fireproximityprompt(prompt)
+                task.wait(0.3)
+            end
+        end
+
+        task.wait(1)
+        pressConfirmButton()
+        
+        -- Tunggu hasil enchant muncul
+        local resultEnchant
+        local waitTime = 5 -- waktu tunggu maksimal 5 detik
+        local startTime = tick()
+        while tick() - startTime < waitTime do
+            resultEnchant = getCurrentRodEnchant()
+            if resultEnchant then break end
+            task.wait(0.1)
+        end
+        
+        -- Tunggu notifikasi hilang
+        waitUntilNotifyGone()
+        
+        currentEnchantLabel.Text = "Enchant Sekarang: " .. (resultEnchant or "-")
+
+        if resultEnchant == selectedEnchant then
+            print("[INFO] Enchant berhasil:", resultEnchant)
+            running = false
+            toggleBtn.Text = "Start"
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+            break
+        end
+    end
+end
+
+task.spawn(function()
+    while true do
+        local current = getCurrentRodEnchant()
+        currentEnchantLabel.Text = "Enchant Sekarang: " .. (current or "-")
+    end
+end)
+
+toggleBtn.MouseButton1Click:Connect(function()
+    if not selectedEnchant then
+        dropdown.Text = "Pilih enchant dulu!"
+        return
+    end
+
+    running = not running
+    toggleBtn.Text = running and "Stop" or "Start"
+    toggleBtn.BackgroundColor3 = running and Color3.fromRGB(170, 0, 0) or Color3.fromRGB(0, 170, 0)
+
+    if running then
+        task.spawn(autoEnchant)
+    end
+end)
